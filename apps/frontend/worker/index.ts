@@ -30,6 +30,30 @@ interface Env {
   GROQ_API_KEY?: string
 }
 
+/**
+ * Origins allowed to call the proxies.
+ *
+ * Browsers send `Origin` on every POST, including same-origin ones, so a real
+ * user of the app always presents one of these. A bare `curl` presents none and
+ * is refused.
+ *
+ * Be honest about what this buys: `curl -H 'Origin: https://stiqr.zabaca.com'`
+ * walks straight through. A public SPA cannot hold a secret, so nothing enforced
+ * at this layer is unforgeable. The goal is to make casual and automated abuse
+ * cost something, not to make it impossible.
+ *
+ * NOTE: there is no rate limit here. Cloudflare's `ratelimit` binding was tried
+ * and does NOT enforce on this account: wrangler registers it as "Unsafe
+ * Metadata", `limit()` returns `success: true` unconditionally, and 20 parallel
+ * requests against a 5-per-10-seconds config produced zero 429s. It was removed
+ * rather than left in place looking like protection. Rate limiting belongs in a
+ * zone-level WAF rule or a Durable Object; see docs/runbooks/dns-cutover-stiqr.md.
+ */
+const ALLOWED_ORIGINS = new Set([
+  'https://stiqr.zabaca.com',
+  'https://stiqr.james-99a.workers.dev',
+])
+
 interface ChatRequest {
   model?: string
   messages?: unknown[]
@@ -76,6 +100,11 @@ async function proxy(
 ): Promise<Response> {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405)
+  }
+
+  const origin = request.headers.get('Origin')
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    return json({ error: 'Forbidden' }, 403)
   }
 
   const apiKey = spec.key(env)

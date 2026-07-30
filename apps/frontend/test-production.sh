@@ -2,10 +2,10 @@
 # Quick production build and test script
 
 echo "🏗️  Building production version..."
-pnpm build
+bun run build
 
 echo "🚀 Starting production preview..."
-pnpm preview --port 5173 &
+bun run preview --port 5173 &
 SERVER_PID=$!
 
 echo "📱 Opening browser in 3 seconds..."

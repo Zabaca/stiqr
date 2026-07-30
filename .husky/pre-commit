@@ -1,21 +1,19 @@
 echo "🔍 Running pre-commit checks..."
 
-# Run TypeScript check on frontend (BLOCKING)
+# TypeScript, on the app and the Worker (BLOCKING)
 echo "📝 Checking TypeScript..."
-pnpm --filter frontend typecheck
-
-if [ $? -ne 0 ]; then
+if ! bun run --cwd apps/frontend typecheck; then
   echo "❌ TypeScript check failed! Please fix the type errors before committing."
-  echo "💡 Run 'pnpm typecheck' to see the errors."
+  echo "💡 Run 'bun run typecheck' to see the errors."
   exit 1
 fi
 
 echo "✅ TypeScript check passed!"
 
-# Run Biome lint check (NON-BLOCKING WARNING)
+# Biome lint check (NON-BLOCKING WARNING)
 echo "🧹 Running Biome linting..."
-if ! pnpm --filter frontend lint:check >/dev/null 2>&1; then
-  echo "⚠️ Biome linting issues found. Consider running 'pnpm lint' to auto-fix."
+if ! bun run --cwd apps/frontend lint:check >/dev/null 2>&1; then
+  echo "⚠️ Biome linting issues found. Consider running 'bun run lint' to auto-fix."
   echo "📝 Lint issues won't block the commit, but TypeScript errors will."
 fi
 

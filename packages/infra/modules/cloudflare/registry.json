@@ -1,0 +1,15 @@
+{
+  "name": "cloudflare",
+  "description": "Cloudflare Worker deploy module (optional static assets, Durable Object, Container)",
+  "files": [{ "path": "index.ts" }],
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "secrets": ["CLOUDFLARE_API_TOKEN"],
+  "signupUrl": "https://dash.cloudflare.com/sign-up",
+  "tokenUrl": "https://dash.cloudflare.com/profile/api-tokens",
+  "instructions": "Add CLOUDFLARE_API_TOKEN to packages/infra/environments/<env>/secrets.yaml; set accountId in the instance config (not a secret). The Worker topology lives in the package's own wrangler.jsonc, which is the source of truth for it. For per-PR preview workers, set workerName (e.g. `zbc-<app>-pr-${process.env.PR_NUMBER}`) on the preview instance; use wranglerEnv to select a named `env.<name>` block in wrangler.jsonc instead. Container-backed Workers need Docker running locally at apply time and a Workers Paid plan with Containers enabled. workerSecrets/workerVars entries are either a plain name (from secrets.yaml) or `{ name, from, output }` to pull a value from an imported instance's outputs (the instance must also be listed in this instance's `imports`) — secrets are pushed via `wrangler secret put`, vars via `wrangler deploy --var`."
+}

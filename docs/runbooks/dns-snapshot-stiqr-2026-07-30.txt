@@ -1,0 +1,20 @@
+# stiqr.zabaca.com DNS, snapshot taken immediately before the Cloudflare cutover.
+#
+# One record changes. Nothing else in the zabaca.com zone is touched, and no mail
+# record is involved.
+#
+# To roll back, delete the Worker custom-domain attachment for stiqr.zabaca.com
+# (a proxied AAAA placeholder at 100:: takes the record's place), then recreate
+# this record exactly:
+
+CNAME  stiqr.zabaca.com  ->  stiqr.netlify.app   proxied=true  ttl=1 (auto)
+       record id at snapshot time: 855c5fa29d37376ec3ba7c42ebff1059
+
+# The Netlify site is NOT deleted by the cutover and keeps serving at
+# stiqr.netlify.app, so rollback is a DNS change only, with no rebuild.
+#
+# Telling the two hosts apart is not possible from the `server:` header here:
+# this record was already proxied, so Cloudflare answers either way. Use one of:
+#   - `x-nf-request-id` response header, present only on Netlify
+#   - the bundle name in index.html. Netlify was serving assets/main-CIm4GWgN.js
+#     at cutover; the Worker served assets/main-DKs2m2RV.js.

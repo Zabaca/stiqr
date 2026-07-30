@@ -94,6 +94,6 @@ Update `src/data/componentManifest.ts`:
 
 ### Testing
 
-1. Start dev server: `pnpm dev`
+1. Start dev server: `bun run dev`
 2. Visit: `http://localhost:5173/components/your-component.js`
 3. Test in Component Library

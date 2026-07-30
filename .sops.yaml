@@ -1,0 +1,12 @@
+# age recipients able to decrypt this repo's secrets.
+#
+# NOTE: this repository is PUBLIC. sops ciphertext is safe to publish, which is
+# the whole point of committing it, but it does publish the recipient list and
+# the encrypted blobs. Anything stored here should be a key we are willing to
+# rotate rather than one we cannot replace.
+#
+# Only James's operator machine for now. Deploys run from his laptop
+# (`bunx @zabaca/zbc apply production`), so there is no CI key to add yet.
+creation_rules:
+  - age: >-
+      age1cq0k9s88fmx7kkaqqvuf290lelyt8gkeglwvsd2r3ezuqyla7aps7x4q2j

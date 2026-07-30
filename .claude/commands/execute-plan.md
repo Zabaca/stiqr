@@ -15,7 +15,7 @@ Guidelines for managing goal lists in task files to track progress on completing
 - **One parent goal at a time:** Do **NOT** start the next parent goal until you ask the user for permission and they say “yes” or "y"
 
 - **Completion protocol:**
-    1. Before marking any goal as complete, run `pnpm lint` to ensure code quality.
+    1. Before marking any goal as complete, run `bun run lint` to ensure code quality.
     2. When you finish a **sub-goal**, immediately mark it as completed by changing `[ ]` to `[x]`.
     3. If **all** sub-goals underneath a parent goal are now `[x]`, also mark the **parent goal** as completed.
 
@@ -41,7 +41,7 @@ When working with goal lists, the AI must:
 1. Regularly update the goal list file after finishing any significant work.
 
 2. Follow the completion protocol:
-    - Run `pnpm lint` before marking any goal complete.
+    - Run `bun run lint` before marking any goal complete.
     - Mark each finished **goal** `[x]`.
     - Mark the **parent goal** `[x]` once **all** its sub-goals are `[x]`.
 

@@ -36,13 +36,13 @@ stiqr/                         # Monorepo root
 - **Babel Standalone** - Runtime JSX transpilation
 - **Native Import Maps** - Browser-native module resolution
 - **Vite** - Development and build tooling
-- **PNPM** - Package manager with workspace support
+- **bun** - Package manager with workspace support
 - **Bit.dev** - Component management platform (configured)
 
 ### Key Design Decisions
 
 #### 1. Monorepo Architecture
-- PNPM workspaces for managing multiple apps/packages
+- bun workspaces for managing multiple apps/packages
 - Centralized environment configuration
 - Prepared for future backend services
 - Shared dependencies and tooling

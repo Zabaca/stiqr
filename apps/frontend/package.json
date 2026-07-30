@@ -12,7 +12,7 @@
     "lint:check": "biome lint .",
     "format": "biome format . --write",
     "format:check": "biome format .",
-    "check": "pnpm typecheck && pnpm lint:check",
+    "check": "bun run typecheck && bun run lint:check",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,6 +1,13 @@
+# Netlify still serves stiqr.zabaca.com and is the rollback target for the
+# Cloudflare cutover, so this config has to keep working until DNS actually
+# moves. It uses bun, because the pnpm workspace files are gone: Netlify detects
+# bun from the committed bun.lock.
+#
+# Delete this file and netlify/functions/ in the same commit that flips DNS, not
+# before.
 [build]
   publish = "apps/frontend/dist"
-  command = "pnpm run build"
+  command = "bun run build"
 
 [build.environment]
   NODE_VERSION = "20"

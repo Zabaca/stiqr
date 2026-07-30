@@ -42,7 +42,12 @@ const PROXIES = {
   '/.netlify/functions/cerebras': {
     label: 'Cerebras',
     url: 'https://api.cerebras.ai/v1/chat/completions',
+    // The Cerebras original sent this explicitly; the Groq one did not.
+    stream: false as boolean | undefined,
     key: (env: Env) => env.CEREBRAS_API_KEY,
+    // Each original used its own wording for this. Kept verbatim rather than
+    // unified, so the cutover is byte-for-byte comparable.
+    missingKey: 'API key not configured',
     model: 'llama3.1-8b',
     temperature: 0.7,
     maxTokens: 20000,
@@ -51,6 +56,7 @@ const PROXIES = {
     label: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
     key: (env: Env) => env.GROQ_API_KEY,
+    missingKey: 'Groq API key not configured',
     model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
     temperature: 0.3,
     maxTokens: 2000,
@@ -74,17 +80,15 @@ async function proxy(
 
   const apiKey = spec.key(env)
   if (!apiKey) {
-    return json({ error: 'API key not configured' }, 500)
-  }
-
-  let body: ChatRequest
-  try {
-    body = (await request.json()) as ChatRequest
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400)
+    return json({ error: spec.missingKey }, 500)
   }
 
   try {
+    // Parsing lives inside the try on purpose: the Netlify originals parsed here
+    // too, so a malformed body produces 500 "Internal server error" rather than
+    // a 400. Faithful over correct, until the cutover is done.
+    const body = (await request.json()) as ChatRequest
+
     const upstream = await fetch(spec.url, {
       method: 'POST',
       headers: {
@@ -96,6 +100,7 @@ async function proxy(
         messages: body.messages,
         temperature: body.temperature ?? spec.temperature,
         max_tokens: body.max_tokens ?? spec.maxTokens,
+        ...('stream' in spec ? { stream: spec.stream } : {}),
       }),
     })
 

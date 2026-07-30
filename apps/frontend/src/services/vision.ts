@@ -55,14 +55,9 @@ class VisionService {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || ''; // API key not needed for Netlify function
-    // Use proxy/Netlify function to avoid CORS issues (similar to Cerebras service)
-    const isLocalhost =
-      typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-    this.baseURL = isLocalhost
-      ? '/api/groq' // Vite proxy
-      : '/.netlify/functions/groq'; // Netlify Function for production
+    // Same path in both environments: the Vite proxy handles it in development,
+    // the Cloudflare Worker route in production. No branch needed.
+    this.baseURL = '/api/groq';
 
     this.defaultModel = 'llama-4-maverick';
   }

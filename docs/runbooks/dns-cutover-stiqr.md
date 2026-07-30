@@ -33,49 +33,50 @@ attach. Same procedure as the zabaca.com cutover.
 deploy the edge serves old and new versions alternately. A single check told me
 the cutover had not taken when it had. Convergence here was 12/12.
 
-## Rolling back: retired, deliberately
+## Rolling back: impossible, and that is now settled
 
-**James decided on 2026-07-30 that the Netlify rollback is not needed.** Record
-that as a decision, not an oversight: the cutover is one-way from here, and
-recovering from a bad Worker deploy means fixing forward, not reverting DNS.
+James retired the rollback on 2026-07-30 and then **deleted the Netlify project**
+the same day. `stiqr.netlify.app` returns 404. There is no revert target: the way
+out of a bad Worker deploy is to fix forward.
 
-That call is easier to defend once you know the rollback was never as clean as it
-looked. Both directions were measured, and it cut two ways at once:
+Worth recording why losing it cost less than it sounds, because both directions
+were measured before it went away:
 
-- **Rolling back would have RESTORED the AI features.** Netlify still holds
-  working Cerebras and Groq keys: `stiqr.netlify.app` returns real upstream
-  validation errors (400), while the Worker returns 500 "API key not configured".
-  A rollback was an *upgrade* in functionality, which inverts what the word
-  normally means.
-- **Rolling back would have BROKEN deep links.** Netlify has no SPA fallback for
-  this site: no `_redirects` file exists and `netlify.toml` carries only the
-  `/api/*` rule, so `stiqr.netlify.app/a/deep/link` returns 404 while the Worker
-  returns 200 via `not_found_handling: single-page-application`.
+- Rolling back would have **restored the AI features**, since Netlify still held
+  working keys while the Worker had none. A "rollback" was an upgrade, which
+  inverts what the word usually means. Moot now: the Worker has its own keys.
+- Rolling back would have **broken deep links**, since Netlify had no SPA
+  fallback for this site (404 on `stiqr.netlify.app/a/deep/link`, versus 200 on
+  the Worker).
 
-So the real trade was "AI comes back, deep links break". Any runbook claiming a
-clean revert would have been lying.
+So the revert everyone assumed was clean would have traded one broken thing for
+another. It is not a loss worth mourning.
 
-### If someone reverses this decision anyway
-
-The order matters and is not guessable:
-
-1. **Detach the Worker custom domain** for `stiqr.zabaca.com` first, via the
-   Cloudflare API (`GET` then `DELETE` on
-   `/accounts/$ACCOUNT/workers/domains`) or the dashboard under the Worker's
-   Domains & Routes. A proxied `AAAA` placeholder at `100::` holds the record,
-   and a CNAME cannot be written over it while the Worker still claims the name.
-2. Recreate `CNAME stiqr.zabaca.com -> stiqr.netlify.app`, proxied, from
-   [the snapshot](./dns-snapshot-stiqr-2026-07-30.txt).
-3. **Remove the `routes` block from `apps/frontend/wrangler.jsonc` before anyone
-   runs `zbc apply production` again.** An apply between steps 2 and 3 silently
-   re-attaches the custom domain and undoes the rollback with a green checkmark.
-
-Then fix the two asymmetries above, because neither resolves itself.
+**One thing deleting the project did NOT do: revoke the old API keys.** Removing
+the site removed the open proxy that fronted them, which was the actual exposure.
+The credentials themselves stay valid at Cerebras and Groq until revoked in those
+consoles.
 
 ## Current state of the LLM proxies
 
-Both return `500 "API key not configured"`. The keys were never carried over from
-Netlify, deliberately: the plan is to mint fresh Cerebras and Groq keys rather
-than copy the old pair, since both endpoints are unauthenticated proxies to paid
-accounts. The AI features are down until that happens, which was an accepted
-trade to get the cutover done.
+Live, on freshly minted keys pushed as worker secrets from sops. The routes moved
+from `/.netlify/functions/*` to `/api/*` once the Netlify project was deleted and
+the drop-in constraint disappeared.
+
+**Routes match by prefix, and they have to.** Netlify invoked a function for its
+path and any subpath, and VisionService depends on that: it posts to
+`/api/groq/openai/v1/chat/completions`. The Worker shipped with exact-match
+routing at cutover, so that request 405d at the asset layer and vision analysis
+silently stopped reaching Groq. Caught in review, not by a user. Fixed by
+matching the route or any subpath, which is what Netlify did.
+
+Two lessons worth keeping: "byte-identical index.html and all 200s" said nothing
+about a code path no probe exercised, and a proxy that answers on its exact path
+can still be broken for the caller that actually uses it.
+
+They require an `Origin` the app sends, so a bare `curl` gets 403. That is a
+speed bump, not a wall: `curl -H 'Origin: https://stiqr.zabaca.com'` still works.
+There is **no rate limit**, because Cloudflare's `ratelimit` binding does not
+enforce on this account (registers as "Unsafe Metadata", `limit()` always returns
+`success: true`, 20 parallel requests against a 5-per-10-second config produced
+zero 429s). Bounding the spend needs a zone WAF rule or a Durable Object.

@@ -195,26 +195,25 @@ bunx @zabaca/zbc apply production
 Topology lives in `apps/frontend/wrangler.jsonc`, the instance in
 `packages/infra/environments/production/web.ts`.
 
-**stiqr.zabaca.com is still served by Netlify.** The Worker deploys to
-`stiqr.james-99a.workers.dev` only, so it can be compared against the live site
-before any DNS moves. The Netlify config (`apps/frontend/netlify.toml` and
-`apps/frontend/netlify/functions/`) is deliberately still present and still the
-thing serving production; it gets deleted in the same commit that flips DNS.
+`stiqr.zabaca.com` resolves here as of the 2026-07-30 cutover, and the Worker
+stays reachable at `stiqr.james-99a.workers.dev` for comparing a build before it
+goes out. Netlify is gone: the project was deleted on 2026-07-30.
 
 ### The LLM proxies
 
-`/.netlify/functions/cerebras` and `/.netlify/functions/groq` proxy Cerebras and
-Groq so the API keys stay server-side. The Worker serves those exact paths, ugly
-as they are, because the client hardcodes them: keeping them makes the Worker a
-drop-in for Netlify, so the cutover is a pure DNS change. Renaming them to
-`/api/*` is a follow-up that has to change the client, the Worker, and delete the
-Netlify functions in one commit.
+`/api/cerebras` and `/api/groq` proxy Cerebras and Groq so the API keys stay
+server-side. The same paths work in development, where the Vite proxy handles
+them instead.
 
-The keys are **not** configured on the Worker yet. Until they are, both routes
-answer `500 {"error":"API key not configured"}`, which is what the Netlify
-functions did with an unset key. They are set as `CEREBRAS_API_KEY` and
-`GROQ_API_KEY` in this environment's sops-encrypted `secrets.yaml`, plus a
-`workerSecrets` entry on the instance.
+Both routes **require an `Origin` header** the app sends; a request without one,
+or with a foreign one, gets 403. Browsers attach `Origin` to every POST including
+same-origin, so real users always pass. This is not unforgeable, and is not meant
+to be: a public SPA cannot hold a secret, so the goal is to make casual abuse
+cost something. There is no rate limit, see `worker/index.ts` for why.
+
+Keys are `CEREBRAS_API_KEY` and `GROQ_API_KEY` in this environment's
+sops-encrypted `secrets.yaml`, pushed as worker secrets by the instance's
+`workerSecrets` entry.
 
 Note the `VITE_`-prefixed variants in `.env.example` are for **local development
 only**, where Vite proxies directly to the upstream APIs. A `VITE_` variable is

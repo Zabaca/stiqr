@@ -5,15 +5,22 @@
  * The proxies exist so the API keys stay server-side; the browser never sees
  * them. That was true on Netlify and stays true here.
  *
- * ## Why the paths still say `.netlify`
+ * The routes were `/.netlify/functions/*` through the cutover, so this Worker was
+ * a drop-in for the Netlify deployment and the DNS flip moved one thing at a
+ * time. The Netlify project was deleted on 2026-07-30, so they are now `/api/*`.
  *
- * The client hardcodes `/.netlify/functions/cerebras` as its production endpoint
- * (see src/services/cerebras.ts). Serving those exact paths means this Worker is
- * a drop-in for the Netlify deployment, so the DNS cutover is a pure DNS change
- * with nothing else moving at the same time, and rollback stays a one-record
- * revert. Renaming them to `/api/*` is a follow-up once the cutover has settled,
- * and it has to change the client, this file, and delete the Netlify function
- * directory in one commit.
+ * ## Routes match by PREFIX, and that is not cosmetic
+ *
+ * Netlify invokes a function for its own path *and any subpath*, and one caller
+ * relies on it: VisionService posts to `${baseURL}/openai/v1/chat/completions`
+ * (src/services/vision.ts), i.e. `/api/groq/openai/v1/chat/completions`. An
+ * exact-match route silently 405s that request at the asset layer, so vision
+ * analysis stops reaching Groq at all. It shipped that way at cutover and was
+ * caught in review, not by anyone using the app.
+ *
+ * The subpath is deliberately ignored rather than forwarded: the proxy builds
+ * its own upstream URL, exactly as the Netlify function did. Prefix matching
+ * reproduces the old behaviour; forwarding the suffix would invent new.
  *
  * ## One deliberate behaviour change
  *
@@ -30,6 +37,30 @@ interface Env {
   GROQ_API_KEY?: string
 }
 
+/**
+ * Origins allowed to call the proxies.
+ *
+ * Browsers send `Origin` on every POST, including same-origin ones, so a real
+ * user of the app always presents one of these. A bare `curl` presents none and
+ * is refused.
+ *
+ * Be honest about what this buys: `curl -H 'Origin: https://stiqr.zabaca.com'`
+ * walks straight through. A public SPA cannot hold a secret, so nothing enforced
+ * at this layer is unforgeable. The goal is to make casual and automated abuse
+ * cost something, not to make it impossible.
+ *
+ * NOTE: there is no rate limit here. Cloudflare's `ratelimit` binding was tried
+ * and does NOT enforce on this account: wrangler registers it as "Unsafe
+ * Metadata", `limit()` returns `success: true` unconditionally, and 20 parallel
+ * requests against a 5-per-10-seconds config produced zero 429s. It was removed
+ * rather than left in place looking like protection. Rate limiting belongs in a
+ * zone-level WAF rule or a Durable Object; see docs/runbooks/dns-cutover-stiqr.md.
+ */
+const ALLOWED_ORIGINS = new Set([
+  'https://stiqr.zabaca.com',
+  'https://stiqr.james-99a.workers.dev',
+])
+
 interface ChatRequest {
   model?: string
   messages?: unknown[]
@@ -39,7 +70,7 @@ interface ChatRequest {
 
 /** Upstreams, keyed by the path the client already calls. */
 const PROXIES = {
-  '/.netlify/functions/cerebras': {
+  '/api/cerebras': {
     label: 'Cerebras',
     url: 'https://api.cerebras.ai/v1/chat/completions',
     // The Cerebras original sent this explicitly; the Groq one did not.
@@ -52,7 +83,7 @@ const PROXIES = {
     temperature: 0.7,
     maxTokens: 20000,
   },
-  '/.netlify/functions/groq': {
+  '/api/groq': {
     label: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
     key: (env: Env) => env.GROQ_API_KEY,
@@ -76,6 +107,11 @@ async function proxy(
 ): Promise<Response> {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405)
+  }
+
+  const origin = request.headers.get('Origin')
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    return json({ error: 'Forbidden' }, 403)
   }
 
   const apiKey = spec.key(env)
@@ -117,11 +153,19 @@ async function proxy(
   }
 }
 
+/** The proxy route owning this path, matching the route itself or any subpath. */
+function routeFor(pathname: string) {
+  for (const [route, spec] of Object.entries(PROXIES)) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) return spec
+  }
+  return undefined
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url)
 
-    const spec = PROXIES[pathname as keyof typeof PROXIES]
+    const spec = routeFor(pathname)
     if (spec) return proxy(request, env, spec)
 
     return env.ASSETS.fetch(request)

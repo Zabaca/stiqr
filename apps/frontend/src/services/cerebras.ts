@@ -18,17 +18,17 @@ class CerebrasService {
 
   constructor(apiKey: string, enableVision: boolean = true) {
     this.apiKey = apiKey;
-    // Use proxy to avoid CORS issues
-    // In development: Vite proxy
-    // In production: Netlify Function
+    // Use a proxy to avoid CORS issues, and to keep the API key server-side.
+    // In development: the Vite proxy, which forwards to the upstream API.
+    // In production: the Cloudflare Worker route.
     const isLocalhost =
       typeof window !== 'undefined' &&
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     this.baseURL = isLocalhost
       ? '/api/cerebras/v1/chat/completions' // Vite proxy
-      : '/.netlify/functions/cerebras'; // Netlify Function
+      : '/api/cerebras'; // Worker route
 
-    // Initialize vision service (no API key needed - handled by Netlify function)
+    // Initialize vision service (no API key needed, the Worker route holds it)
     if (enableVision) {
       this.visionService = new VisionService();
     }

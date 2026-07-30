@@ -3,13 +3,17 @@
   // stiqr: a Vite/React SPA plus two LLM proxy routes (worker/index.ts) that
   // replace the Netlify Functions. `bun run build` emits dist/.
   //
-  // Lands on stiqr.<subdomain>.workers.dev. No custom domain yet, deliberately:
-  // stiqr.zabaca.com is still served by Netlify, and the DNS flip is a separate
-  // step once this URL has been compared against the live site.
+  // This is the live site: stiqr.zabaca.com resolves here as of the 2026-07-30
+  // cutover, and it stays reachable at stiqr.<subdomain>.workers.dev for
+  // comparing a build before it goes out.
   "name": "stiqr",
   "main": "worker/index.ts",
   "compatibility_date": "2025-11-01",
   "workers_dev": true,
+  // custom_domain makes wrangler own the DNS record, so the binding between site
+  // and domain is this file rather than a dashboard setting. Rollback is in
+  // docs/runbooks/dns-cutover-stiqr.md.
+  "routes": [{ "pattern": "stiqr.zabaca.com", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

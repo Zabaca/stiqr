@@ -16,8 +16,10 @@ import { cloudflareModule } from '../../modules/cloudflare'
 // below. The module pushes them via `wrangler secret put` over stdin, so no
 // value ever lands in a command line or a log.
 //
-// This deploys to stiqr.<subdomain>.workers.dev only. stiqr.zabaca.com is still
-// served by Netlify until the DNS records are flipped deliberately.
+// ⚠️ THIS IS THE LIVE SITE. Since the 2026-07-30 cutover, applying this instance
+// publishes to stiqr.zabaca.com, not just to stiqr.<subdomain>.workers.dev.
+// There is no staging environment in front of it. Compare a build on the
+// workers.dev URL first. Rollback: docs/runbooks/dns-cutover-stiqr.md.
 export default cloudflareModule.instance({
   name: 'web',
   config: {

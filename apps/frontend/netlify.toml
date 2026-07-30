@@ -1,10 +1,22 @@
-# Netlify still serves stiqr.zabaca.com and is the rollback target for the
-# Cloudflare cutover, so this config has to keep working until DNS actually
-# moves. It uses bun, because the pnpm workspace files are gone: Netlify detects
-# bun from the committed bun.lock.
+# stiqr.zabaca.com moved to Cloudflare on 2026-07-30. This config stays because
+# the Netlify site is the ROLLBACK TARGET: re-point the DNS record and Netlify
+# serves again. It has to keep building for that to be true.
 #
-# Delete this file and netlify/functions/ in the same commit that flips DNS, not
-# before.
+# Uses bun, because the pnpm workspace files are gone. Netlify's docs name
+# bun.lockb, but it detects the text-format bun.lock we commit: proven by the
+# deploy preview on this branch going from failure to success on that change
+# alone.
+#
+# The functions are .cjs, not .js, and that matters. They are CommonJS
+# (`exports.handler = ...`) while apps/frontend/package.json says
+# "type": "module", so a .js extension makes Node treat them as ESM and every
+# invocation dies with `ReferenceError: module is not defined in ES module
+# scope`. Production never showed this because it was built before that "type"
+# field landed; the first fresh build after it would have shipped a site whose
+# proxies 502. Renaming them is what makes the rollback real rather than stated.
+#
+# Delete this file and netlify/functions/ once Cloudflare has proven itself and
+# the rollback is no longer wanted. That is a deliberate decision, not cleanup.
 [build]
   publish = "apps/frontend/dist"
   command = "bun run build"

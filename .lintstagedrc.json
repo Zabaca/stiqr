@@ -1,6 +1,6 @@
 {
   "apps/frontend/src/**/*.{ts,tsx}": [
-    "pnpm --filter frontend format",
-    "pnpm --filter frontend lint:check"
+    "bun run --cwd apps/frontend format",
+    "bun run --cwd apps/frontend lint:check"
   ]
 }

@@ -3,24 +3,26 @@
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0",
-  "packageManager": "pnpm@8.15.1",
+  "packageManager": "bun@1.3.5",
   "scripts": {
-    "dev": "pnpm --filter frontend dev",
-    "build": "pnpm --filter frontend build",
-    "preview": "pnpm --filter frontend preview",
-    "typecheck": "pnpm --filter frontend typecheck",
-    "lint": "pnpm --filter frontend lint",
-    "lint:check": "pnpm --filter frontend lint:check",
-    "format": "pnpm --filter frontend format",
-    "format:check": "pnpm --filter frontend format:check",
-    "check": "pnpm --filter frontend check",
-    "dev:all": "pnpm --parallel dev",
-    "build:all": "pnpm -r build",
-    "frontend": "pnpm --filter frontend",
+    "dev": "bun run --cwd apps/frontend dev",
+    "build": "bun run --cwd apps/frontend build",
+    "preview": "bun run --cwd apps/frontend preview",
+    "typecheck": "bun run --cwd apps/frontend typecheck",
+    "lint": "bun run --cwd apps/frontend lint",
+    "lint:check": "bun run --cwd apps/frontend lint:check",
+    "format": "bun run --cwd apps/frontend format",
+    "format:check": "bun run --cwd apps/frontend format:check",
+    "check": "bun run --cwd apps/frontend check",
+    "test": "bun run --cwd apps/frontend test",
     "prepare": "husky"
   },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

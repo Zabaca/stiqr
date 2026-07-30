@@ -32,7 +32,7 @@ stiqr/
 │   └── backend/           # (Future) Backend services
 ├── packages/              # Shared packages
 │   └── shared/           # (Future) Shared utilities
-├── pnpm-workspace.yaml   # PNPM workspace configuration
+├── zbc.config.ts         # zbc project + environments
 └── package.json          # Root monorepo package.json
 ```
 
@@ -41,7 +41,7 @@ stiqr/
 ### Prerequisites
 
 - Node.js 16+ (recommended: 20+)
-- pnpm 8+ (install with `npm install -g pnpm`)
+- bun 1.2+
 
 ### Installation
 
@@ -51,13 +51,13 @@ git clone [repository-url] stiqr
 cd stiqr
 
 # Install all dependencies
-pnpm install
+bun install
 
 # Start the frontend development server
-pnpm dev
+bun run dev
 
 # Or start specific apps
-pnpm --filter frontend dev
+bun run --cwd apps/frontend dev
 ```
 
 The frontend will be available at http://localhost:5173
@@ -102,27 +102,27 @@ The frontend will be available at http://localhost:5173
 
 ```bash
 # Build all apps
-pnpm build:all
+bun run build
 
 # Build frontend only
-pnpm build
+bun run build
 
 # Preview frontend production build
-pnpm preview
+bun run preview
 ```
 
 ### Monorepo Commands
 
 ```bash
 # Run command in specific app
-pnpm --filter frontend <command>
-pnpm --filter backend <command>
+bun run --cwd apps/frontend <command>
+
 
 # Run command in all apps
-pnpm -r <command>
+bun run --cwd apps/<pkg> <command>
 
 # Run parallel dev servers (when backend is added)
-pnpm dev:all
+bun run dev
 ```
 
 ## Architecture
@@ -184,32 +184,41 @@ export default function MyComponent() {
 
 ## Deployment
 
-### Netlify Deployment
-
-1. Connect repository to Netlify
-2. Configure build settings:
-   - Base directory: `apps/frontend`
-   - Build command: `pnpm build`
-   - Publish directory: `apps/frontend/dist`
-   - Functions directory: `apps/frontend/netlify/functions`
-3. Set environment variables:
-   - `VITE_CEREBRAS_API_KEY`: Your Cerebras API key (required)
-   - `VITE_GROQ_API_KEY`: Your Groq API key (optional, for vision features)
-   - `NODE_VERSION`: 20
-
-### Manual Deployment
+Deploys go through [zbc](https://www.npmjs.com/package/@zabaca/zbc), which builds
+`apps/frontend/dist` locally and ships it as a Cloudflare Worker: static assets
+plus the two LLM proxy routes in `apps/frontend/worker/index.ts`.
 
 ```bash
-# Install Netlify CLI
-npm install -g netlify-cli
-
-# Build frontend
-pnpm build
-
-# Deploy from frontend directory
-cd apps/frontend
-netlify deploy --dir=dist --prod
+bunx @zabaca/zbc apply production
 ```
+
+Topology lives in `apps/frontend/wrangler.jsonc`, the instance in
+`packages/infra/environments/production/web.ts`.
+
+**stiqr.zabaca.com is still served by Netlify.** The Worker deploys to
+`stiqr.james-99a.workers.dev` only, so it can be compared against the live site
+before any DNS moves. The Netlify config (`apps/frontend/netlify.toml` and
+`apps/frontend/netlify/functions/`) is deliberately still present and still the
+thing serving production; it gets deleted in the same commit that flips DNS.
+
+### The LLM proxies
+
+`/.netlify/functions/cerebras` and `/.netlify/functions/groq` proxy Cerebras and
+Groq so the API keys stay server-side. The Worker serves those exact paths, ugly
+as they are, because the client hardcodes them: keeping them makes the Worker a
+drop-in for Netlify, so the cutover is a pure DNS change. Renaming them to
+`/api/*` is a follow-up that has to change the client, the Worker, and delete the
+Netlify functions in one commit.
+
+The keys are **not** configured on the Worker yet. Until they are, both routes
+answer `500 {"error":"API key not configured"}`, which is what the Netlify
+functions did with an unset key. They are set as `CEREBRAS_API_KEY` and
+`GROQ_API_KEY` in this environment's sops-encrypted `secrets.yaml`, plus a
+`workerSecrets` entry on the instance.
+
+Note the `VITE_`-prefixed variants in `.env.example` are for **local development
+only**, where Vite proxies directly to the upstream APIs. A `VITE_` variable is
+inlined into the client bundle, so one must never hold a production key.
 
 ## Contributing
 

@@ -23,7 +23,7 @@ stiqr/                         # Monorepo root
 │   │   └── bit-components/      # Bit.dev managed components
 │   └── backend/                 # (Future) Backend services
 ├── packages/                    # Shared packages
-├── pnpm-workspace.yaml         # PNPM workspace configuration
+├── zbc.config.ts               # zbc project + environments
 └── .envrc                      # direnv configuration
 ```
 
@@ -79,7 +79,7 @@ Unified processing system for all component sources:
 
 ### Prerequisites
 - Node.js 16+ (recommended: 20+)
-- PNPM 8+ (`npm install -g pnpm`)
+- bun 1.2+
 - direnv (optional but recommended)
 
 ### Quick Start
@@ -93,10 +93,10 @@ cp .env.example .env
 # Edit .env and add your Cerebras API key
 
 # Install dependencies
-pnpm install
+bun install
 
 # Start development server
-pnpm dev
+bun run dev
 
 # The frontend will be available at http://localhost:5173
 ```
@@ -268,34 +268,34 @@ interface UnifiedComponentNode {
 ### Development
 ```bash
 # Start frontend dev server
-pnpm dev
+bun run dev
 
 # Start specific app
-pnpm --filter frontend dev
+bun run --cwd apps/frontend dev
 
 # Run command in all apps
-pnpm -r <command>
+bun run --cwd apps/<pkg> <command>
 ```
 
 ### Building
 ```bash
 # Build frontend
-pnpm build
+bun run build
 
 # Build all apps
-pnpm build:all
+bun run build
 
 # Type checking
-pnpm typecheck
+bun run typecheck
 ```
 
 ### Testing
 ```bash
 # Run tests (when implemented)
-pnpm test
+bun run test
 
 # Lint code
-pnpm lint
+bun run lint
 ```
 
 ## Common Issues & Solutions
@@ -359,12 +359,21 @@ pnpm lint
 
 ## Deployment
 
-### Netlify Configuration
-- Base directory: `apps/frontend`
-- Build command: `pnpm build`
-- Publish directory: `apps/frontend/dist`
-- Functions directory: `apps/frontend/netlify/functions`
-- Environment variables set in Netlify dashboard
+### Cloudflare Worker, via zbc
+- `bunx @zabaca/zbc apply production` builds and deploys
+- Topology: `apps/frontend/wrangler.jsonc`; instance:
+  `packages/infra/environments/production/web.ts`
+- Static assets from `apps/frontend/dist`, plus the LLM proxy routes in
+  `apps/frontend/worker/index.ts`
+- Secrets are sops-encrypted in `packages/infra/environments/<env>/secrets.yaml`,
+  never set by hand in a dashboard
+
+### Netlify (still live, being retired)
+`stiqr.zabaca.com` still resolves to Netlify. The Worker is at
+`stiqr.james-99a.workers.dev` until DNS is flipped deliberately, so
+`apps/frontend/netlify.toml` and `apps/frontend/netlify/functions/` are still the
+code serving production. Delete them in the same commit that moves DNS, not
+before.
 
 ### Production Optimizations
 - Disable debug logging
@@ -379,7 +388,7 @@ When contributing to Stiqr:
 2. Keep components in appropriate directories
 3. Update types when adding features
 4. Test with ESMTestComponent first
-5. Ensure pnpm build passes
+5. Ensure bun run build passes
 6. Follow ESM-first principles
 7. Follow the coding standards below
 
@@ -419,19 +428,19 @@ describe('Module Name', () => {
 ### Running Tests
 ```bash
 # Run all tests
-pnpm test
+bun run test
 
 # Run specific test file
-pnpm test csvDetector
+bun run test csvDetector
 
 # Run with coverage
-pnpm test:coverage
+bun run test:coverage
 
 # Run in watch mode (interactive)
-pnpm test:watch
+bun run test:watch
 
 # Run with UI (browser interface)
-pnpm test:ui
+bun run test:ui
 ```
 
 ### Test Guidelines
@@ -807,12 +816,12 @@ The project uses ESLint with React-specific rules:
 - `eslint-plugin-react-refresh` for HMR compatibility
 
 #### Type Checking
-- Run `pnpm typecheck` before committing
+- Run `bun run typecheck` before committing
 - Fix all TypeScript errors
 - No `@ts-ignore` without justification
 
 #### Build Validation
-- Ensure `pnpm build` passes
+- Ensure `bun run build` passes
 - Check bundle size impacts
 - Verify no console errors in production build
 

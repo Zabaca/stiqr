@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b",
+    "build": "tsc -b && tsc -p worker/tsconfig.json && vite build",
+    "typecheck": "tsc -b && tsc -p worker/tsconfig.json",
     "lint": "biome check . --apply",
     "lint:check": "biome lint .",
     "format": "biome format . --write",
@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.4",
+    "@cloudflare/workers-types": "^5.20260730.1",
     "@types/babel__standalone": "^7.1.9",
     "@types/d3-dsv": "^3.0.7",
     "@types/node": "^24.1.0",

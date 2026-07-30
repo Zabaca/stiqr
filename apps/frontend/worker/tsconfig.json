@@ -1,0 +1,18 @@
+{
+  // Separate from the app's tsconfig: Workers globals conflict with the DOM lib
+  // the React app compiles against. `tsc -b` only sees src/**, so without this
+  // the Worker would be typechecked by nothing (wrangler bundles via esbuild,
+  // which strips types without checking them).
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true
+  },
+  "include": ["**/*.ts"]
+}

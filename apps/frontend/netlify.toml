@@ -15,8 +15,10 @@
 # field landed; the first fresh build after it would have shipped a site whose
 # proxies 502. Renaming them is what makes the rollback real rather than stated.
 #
-# Delete this file and netlify/functions/ once Cloudflare has proven itself and
-# the rollback is no longer wanted. That is a deliberate decision, not cleanup.
+# James retired the rollback on 2026-07-30, so this file and netlify/functions/
+# are now scheduled for deletion along with the /.netlify/functions/ paths in the
+# Worker, which only exist to mirror them. Until that lands, note the Netlify
+# integration is still connected to this repo and builds on every push.
 [build]
   publish = "apps/frontend/dist"
   command = "bun run build"

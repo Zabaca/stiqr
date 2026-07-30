@@ -33,30 +33,44 @@ attach. Same procedure as the zabaca.com cutover.
 deploy the edge serves old and new versions alternately. A single check told me
 the cutover had not taken when it had. Convergence here was 12/12.
 
-## Rolling back
+## Rolling back: retired, deliberately
 
-1. Delete the Worker custom-domain attachment for `stiqr.zabaca.com`. A proxied
-   `AAAA` placeholder at `100::` holds the record's place, and a CNAME cannot be
-   written over it while the Worker still claims the hostname.
-2. Recreate `CNAME stiqr.zabaca.com -> stiqr.netlify.app`, proxied.
-3. Remove the `routes` block from `apps/frontend/wrangler.jsonc` so the next
-   apply does not recreate the attachment.
+**James decided on 2026-07-30 that the Netlify rollback is not needed.** Record
+that as a decision, not an oversight: the cutover is one-way from here, and
+recovering from a bad Worker deploy means fixing forward, not reverting DNS.
 
-The Netlify site is not deleted and keeps serving at `stiqr.netlify.app`.
+That call is easier to defend once you know the rollback was never as clean as it
+looked. Both directions were measured, and it cut two ways at once:
 
-### The rollback was broken, and is now fixed
+- **Rolling back would have RESTORED the AI features.** Netlify still holds
+  working Cerebras and Groq keys: `stiqr.netlify.app` returns real upstream
+  validation errors (400), while the Worker returns 500 "API key not configured".
+  A rollback was an *upgrade* in functionality, which inverts what the word
+  normally means.
+- **Rolling back would have BROKEN deep links.** Netlify has no SPA fallback for
+  this site: no `_redirects` file exists and `netlify.toml` carries only the
+  `/api/*` rule, so `stiqr.netlify.app/a/deep/link` returns 404 while the Worker
+  returns 200 via `not_found_handling: single-page-application`.
 
-Worth knowing, because it was invisible. The Netlify Functions are CommonJS while
-`apps/frontend/package.json` sets `"type": "module"`, so on any **fresh** build
-Node treats a `.js` function as ESM and every call dies with
-`ReferenceError: module is not defined in ES module scope`. Production never
-showed it because production was built before that `"type"` field landed. A
-rollback that triggered a rebuild would have landed on a site whose LLM proxies
-502, and the build would have looked green while doing it.
+So the real trade was "AI comes back, deep links break". Any runbook claiming a
+clean revert would have been lying.
 
-Fixed by renaming both functions to `.cjs`. Verified on the branch's own Netlify
-deploy preview, which is the cheapest way to test a Netlify build: it is already
-running on every push, no deploy required.
+### If someone reverses this decision anyway
+
+The order matters and is not guessable:
+
+1. **Detach the Worker custom domain** for `stiqr.zabaca.com` first, via the
+   Cloudflare API (`GET` then `DELETE` on
+   `/accounts/$ACCOUNT/workers/domains`) or the dashboard under the Worker's
+   Domains & Routes. A proxied `AAAA` placeholder at `100::` holds the record,
+   and a CNAME cannot be written over it while the Worker still claims the name.
+2. Recreate `CNAME stiqr.zabaca.com -> stiqr.netlify.app`, proxied, from
+   [the snapshot](./dns-snapshot-stiqr-2026-07-30.txt).
+3. **Remove the `routes` block from `apps/frontend/wrangler.jsonc` before anyone
+   runs `zbc apply production` again.** An apply between steps 2 and 3 silently
+   re-attaches the custom domain and undoes the rollback with a green checkmark.
+
+Then fix the two asymmetries above, because neither resolves itself.
 
 ## Current state of the LLM proxies
 

@@ -368,12 +368,9 @@ bun run lint
 - Secrets are sops-encrypted in `packages/infra/environments/<env>/secrets.yaml`,
   never set by hand in a dashboard
 
-### Netlify (still live, being retired)
-`stiqr.zabaca.com` still resolves to Netlify. The Worker is at
-`stiqr.james-99a.workers.dev` until DNS is flipped deliberately, so
-`apps/frontend/netlify.toml` and `apps/frontend/netlify/functions/` are still the
-code serving production. Delete them in the same commit that moves DNS, not
-before.
+### Netlify: gone
+The project was deleted on 2026-07-30. Nothing in this repo deploys to it, and
+`stiqr.netlify.app` no longer resolves.
 
 ### Production Optimizations
 - Disable debug logging

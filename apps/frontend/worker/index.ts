@@ -5,15 +5,10 @@
  * The proxies exist so the API keys stay server-side; the browser never sees
  * them. That was true on Netlify and stays true here.
  *
- * ## Why the paths still say `.netlify`
- *
- * The client hardcodes `/.netlify/functions/cerebras` as its production endpoint
- * (see src/services/cerebras.ts). Serving those exact paths means this Worker is
- * a drop-in for the Netlify deployment, so the DNS cutover is a pure DNS change
- * with nothing else moving at the same time, and rollback stays a one-record
- * revert. Renaming them to `/api/*` is a follow-up once the cutover has settled,
- * and it has to change the client, this file, and delete the Netlify function
- * directory in one commit.
+ * The routes were `/.netlify/functions/*` through the cutover, so this Worker was
+ * a drop-in for the Netlify deployment and the DNS flip moved one thing at a
+ * time. The Netlify project was deleted on 2026-07-30, so they are now `/api/*`,
+ * matching what the Vite dev proxy already used.
  *
  * ## One deliberate behaviour change
  *
@@ -63,7 +58,7 @@ interface ChatRequest {
 
 /** Upstreams, keyed by the path the client already calls. */
 const PROXIES = {
-  '/.netlify/functions/cerebras': {
+  '/api/cerebras': {
     label: 'Cerebras',
     url: 'https://api.cerebras.ai/v1/chat/completions',
     // The Cerebras original sent this explicitly; the Groq one did not.
@@ -76,7 +71,7 @@ const PROXIES = {
     temperature: 0.7,
     maxTokens: 20000,
   },
-  '/.netlify/functions/groq': {
+  '/api/groq': {
     label: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
     key: (env: Env) => env.GROQ_API_KEY,

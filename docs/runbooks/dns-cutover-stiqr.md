@@ -63,6 +63,17 @@ Live, on freshly minted keys pushed as worker secrets from sops. The routes move
 from `/.netlify/functions/*` to `/api/*` once the Netlify project was deleted and
 the drop-in constraint disappeared.
 
+**Routes match by prefix, and they have to.** Netlify invoked a function for its
+path and any subpath, and VisionService depends on that: it posts to
+`/api/groq/openai/v1/chat/completions`. The Worker shipped with exact-match
+routing at cutover, so that request 405d at the asset layer and vision analysis
+silently stopped reaching Groq. Caught in review, not by a user. Fixed by
+matching the route or any subpath, which is what Netlify did.
+
+Two lessons worth keeping: "byte-identical index.html and all 200s" said nothing
+about a code path no probe exercised, and a proxy that answers on its exact path
+can still be broken for the caller that actually uses it.
+
 They require an `Origin` the app sends, so a bare `curl` gets 403. That is a
 speed bump, not a wall: `curl -H 'Origin: https://stiqr.zabaca.com'` still works.
 There is **no rate limit**, because Cloudflare's `ratelimit` binding does not

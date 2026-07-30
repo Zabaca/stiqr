@@ -7,8 +7,20 @@
  *
  * The routes were `/.netlify/functions/*` through the cutover, so this Worker was
  * a drop-in for the Netlify deployment and the DNS flip moved one thing at a
- * time. The Netlify project was deleted on 2026-07-30, so they are now `/api/*`,
- * matching what the Vite dev proxy already used.
+ * time. The Netlify project was deleted on 2026-07-30, so they are now `/api/*`.
+ *
+ * ## Routes match by PREFIX, and that is not cosmetic
+ *
+ * Netlify invokes a function for its own path *and any subpath*, and one caller
+ * relies on it: VisionService posts to `${baseURL}/openai/v1/chat/completions`
+ * (src/services/vision.ts), i.e. `/api/groq/openai/v1/chat/completions`. An
+ * exact-match route silently 405s that request at the asset layer, so vision
+ * analysis stops reaching Groq at all. It shipped that way at cutover and was
+ * caught in review, not by anyone using the app.
+ *
+ * The subpath is deliberately ignored rather than forwarded: the proxy builds
+ * its own upstream URL, exactly as the Netlify function did. Prefix matching
+ * reproduces the old behaviour; forwarding the suffix would invent new.
  *
  * ## One deliberate behaviour change
  *
@@ -141,11 +153,19 @@ async function proxy(
   }
 }
 
+/** The proxy route owning this path, matching the route itself or any subpath. */
+function routeFor(pathname: string) {
+  for (const [route, spec] of Object.entries(PROXIES)) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) return spec
+  }
+  return undefined
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url)
 
-    const spec = PROXIES[pathname as keyof typeof PROXIES]
+    const spec = routeFor(pathname)
     if (spec) return proxy(request, env, spec)
 
     return env.ASSETS.fetch(request)

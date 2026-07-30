@@ -10,8 +10,12 @@
 CNAME  stiqr.zabaca.com  ->  stiqr.netlify.app   proxied=true  ttl=1 (auto)
        record id at snapshot time: 855c5fa29d37376ec3ba7c42ebff1059
 
-# The Netlify site is NOT deleted by the cutover and keeps serving at
-# stiqr.netlify.app, so rollback is a DNS change only, with no rebuild.
+# SUPERSEDED, same day: the Netlify project was DELETED on 2026-07-30, so
+# stiqr.netlify.app now 404s and there is no rollback target. This file is kept
+# only as a record of what the record used to be. Do not read the line below as
+# current guidance.
+#   (was: "The Netlify site is NOT deleted by the cutover and keeps serving at
+#    stiqr.netlify.app, so rollback is a DNS change only, with no rebuild.")
 #
 # Telling the two hosts apart is not possible from the `server:` header here:
 # this record was already proxied, so Cloudflare answers either way. Use one of:
